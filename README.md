@@ -22,7 +22,7 @@
 
 ## اسناد
 - [RULES.md](RULES.md)
-- [کاتالوگ و امتیازدهی](docs/CODE_CATALOG.md)
+- [معماری و ماتریس ۵ راهکار](docs/ARCHITECTURE.md)\n- [کاتالوگ و امتیازدهی](docs/CODE_CATALOG.md)\n- [ممیزی استاتیک آرشیو قدیمی](docs/LEGACY_AUDIT.md)
 - [پرامپت‌های مکمل](docs/PROMPTS.md)
 - [BACKLOG.md](BACKLOG.md)
 - [HANDOFF.md](HANDOFF.md)
