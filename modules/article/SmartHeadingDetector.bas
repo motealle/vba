@@ -78,10 +78,12 @@ Private Function RVA_HeadingLevelForParagraph(ByVal doc As Document, ByVal p As 
         Exit Function
     End If
 
-    level = RVA_NumberedHeadingLevel(s)
-    If level > 0 Then
-        RVA_HeadingLevelForParagraph = level
-        Exit Function
+    If Not RVA_LooksLikeSentence(s) Then
+        level = RVA_NumberedHeadingLevel(s)
+        If level > 0 Then
+            RVA_HeadingLevelForParagraph = level
+            Exit Function
+        End If
     End If
 
     If RVA_IsKnownLevel1(s) Then
@@ -116,45 +118,65 @@ Private Function RVA_NumberedHeadingLevel(ByVal value As String) As Long
     Dim groups As Long
     Dim nextPos As Long
     Dim ch As String
+    Dim sawHierarchy As Boolean
+    Dim sawSpaces As Boolean
+    Dim boundaryFound As Boolean
 
     s = RVA_ToAsciiDigits(Trim$(value))
-    If Len(s) < 2 Then Exit Function
+    If Len(s) < 3 Then Exit Function
 
     i = 1
     Do While i <= Len(s) And (Mid$(s, i, 1) = "(" Or Mid$(s, i, 1) = "[")
         i = i + 1
     Loop
 
-    Do While i <= Len(s)
-        If Not RVA_IsAsciiDigit(Mid$(s, i, 1)) Then Exit Do
+    Do
+        If i > Len(s) Or Not RVA_IsAsciiDigit(Mid$(s, i, 1)) Then Exit Function
 
         Do While i <= Len(s) And RVA_IsAsciiDigit(Mid$(s, i, 1))
             i = i + 1
         Loop
         groups = groups + 1
-        If groups >= 3 Then Exit Do
 
+        sawSpaces = False
         Do While i <= Len(s) And Mid$(s, i, 1) = " "
+            sawSpaces = True
             i = i + 1
         Loop
-        If i > Len(s) Then Exit Do
+        If i > Len(s) Then Exit Function
 
         ch = Mid$(s, i, 1)
-        If ch <> "-" And ch <> "." And ch <> "/" Then Exit Do
 
-        nextPos = i + 1
-        Do While nextPos <= Len(s) And Mid$(s, nextPos, 1) = " "
-            nextPos = nextPos + 1
-        Loop
-        If nextPos <= Len(s) And RVA_IsAsciiDigit(Mid$(s, nextPos, 1)) Then
-            i = nextPos
-        Else
+        If ch = "-" Or ch = "." Or ch = "/" Then
+            nextPos = i + 1
+            Do While nextPos <= Len(s) And Mid$(s, nextPos, 1) = " "
+                nextPos = nextPos + 1
+            Loop
+
+            If nextPos <= Len(s) And RVA_IsAsciiDigit(Mid$(s, nextPos, 1)) Then
+                sawHierarchy = True
+                i = nextPos
+            Else
+                boundaryFound = True
+                Exit Do
+            End If
+        ElseIf ch = ")" Or ch = "]" Or ch = ":" Then
+            boundaryFound = True
             Exit Do
+        ElseIf sawSpaces And sawHierarchy Then
+            boundaryFound = True
+            Exit Do
+        Else
+            Exit Function
         End If
+
+        If groups >= 6 Then Exit Function
     Loop
 
+    If Not boundaryFound Then Exit Function
     If groups < 1 Then Exit Function
     If Not RVA_HasHeadingTextAfterPrefix(s, i) Then Exit Function
+
     If groups > 3 Then groups = 3
     RVA_NumberedHeadingLevel = groups
 End Function
@@ -204,7 +226,7 @@ Private Function RVA_LooksLikeSentence(ByVal s As String) As Boolean
     Dim lastChar As String
     If Len(s) = 0 Then Exit Function
     lastChar = Right$(s, 1)
-    RVA_LooksLikeSentence = (lastChar = "." Or lastChar = "!" Or lastChar = "?")
+    RVA_LooksLikeSentence = (lastChar = "." Or lastChar = "!" Or lastChar = "?" Or lastChar = ChrW$(&H61F))
 End Function
 
 Private Function RVA_IsKnownLevel1(ByVal s As String) As Boolean
